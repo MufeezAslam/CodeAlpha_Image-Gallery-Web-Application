@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Stellar Gallery — Bug-free Demo</title>
+  <meta name="description" content="Stellar Gallery — responsive gallery with filters, search and lightbox. Uses stable Picsum images and SVG fallback.">
+
+  <style>
+    /* ---------- Variables & Reset ---------- */
+    :root{
+      --bg:#0f172a;
+      --panel: rgba(255,255,255,0.03);
+      --glass-border: rgba(255,255,255,0.06);
+      --accent-start:#7c3aed;
+      --accent-end:#06b6d4;
+      --gap:18px;
+      --ease:cubic-bezier(.2,.9,.25,1);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,Segoe UI,Roboto,Arial;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      background:
+        radial-gradient(900px 360px at 10% 10%, rgba(124,58,237,0.06), transparent),
+        linear-gradient(180deg, rgba(6,10,20,0.86), rgba(2,6,12,0.98)),
+        var(--bg);
+      color:#fff;
+      padding:24px;
+      display:flex;
+      justify-content:center;
+    }
+
+    /* ---------- Layout ---------- */
+    .wrap{ width:100%; max-width:1200px; }
+
+    .navbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:16px;
+      gap:12px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      justify-content:center;
+      flex:1;
+    }
+    .logo{
+      width:48px; height:48px; border-radius:10px;
+      background: linear-gradient(135deg,var(--accent-start),var(--accent-end));
+      display:flex; align-items:center; justify-content:center; color:white; font-weight:700;
+      box-shadow: 0 8px 30px rgba(12,18,40,0.6);
+    }
+    h1{ margin:0; font-size:1.05rem; }
+    .subtitle{ margin:0; color:rgba(255,255,255,0.75); font-size:0.9rem; text-align:center; }
+
+    .nav-side{ width:120px; }
+
+    /* ---------- Controls ---------- */
+    .controls{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:14px;
+      flex-wrap:wrap;
+    }
+    .filter-bar{
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+      padding:8px; border-radius:12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid var(--glass-border); backdrop-filter: blur(8px);
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+    }
+    .filter{
+      appearance:none; border:none; background:transparent;
+      padding:8px 12px; border-radius:10px; color:rgba(255,255,255,0.9);
+      font-weight:600; cursor:pointer; transition: transform .18s var(--ease), color .18s var(--ease);
+    }
+    .filter:hover{ transform: translateY(-2px); }
+    .filter.active{
+      color:#fff;
+      background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      box-shadow: 0 6px 18px rgba(12,18,40,0.5);
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .search{
+      min-width:220px; max-width:420px; width:100%;
+      padding:10px 12px; border-radius:10px;
+      border:1px solid rgba(255,255,255,0.04); background: rgba(255,255,255,0.02);
+      color:#fff; transition: box-shadow .18s var(--ease);
+    }
+    .search:focus{ box-shadow:0 8px 30px rgba(12,18,40,0.6); outline:none; }
+
+    /* ---------- Gallery Grid ---------- */
+    .gallery{
+      display:grid;
+      grid-template-columns:repeat(1,1fr);
+      gap:var(--gap);
+      align-items:start;
+    }
+    @media(min-width:640px){ .gallery{ grid-template-columns:repeat(2,1fr); } }
+    @media(min-width:960px){ .gallery{ grid-template-columns:repeat(3,1fr); } }
+    @media(min-width:1200px){ .gallery{ grid-template-columns:repeat(4,1fr); } }
+
+    .card{
+      position:relative; border-radius:12px; overflow:hidden;
+      background:var(--panel); border:1px solid var(--glass-border);
+      transition: transform .35s var(--ease), box-shadow .35s var(--ease), opacity .25s var(--ease);
+      cursor:zoom-in; height:260px; display:block;
+    }
+    .card img{ width:100%; height:100%; object-fit:cover; display:block; transition: transform .45s var(--ease), filter .35s var(--ease); }
+    .card:hover img{ transform:scale(1.04); filter:brightness(1.03); }
+    .meta{ position:absolute; left:12px; right:12px; bottom:12px;
+           background: linear-gradient(0deg, rgba(0,0,0,0.62), rgba(0,0,0,0.18));
+           padding:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;
+           transform: translateY(10px); transition: transform .28s var(--ease), opacity .28s var(--ease); opacity:0; }
+    .card:hover .meta{ transform:none; opacity:1; }
+    .meta h3{ margin:0; font-size:0.95rem }
+    .meta span{ font-size:0.78rem; color:rgba(255,255,255,0.92) }
+
+    .hidden{ opacity:0; transform:scale(.98); pointer-events:none; height:0 !important; padding:0 !important; margin:0 !important; overflow:hidden; }
+
+    /* ---------- Lightbox ---------- */
+    .lightbox{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:9999; }
+    .lightbox.show{ display:flex; }
+    .backdrop{ position:absolute; inset:0; background: linear-gradient(180deg, rgba(2,6,12,0.75), rgba(2,6,12,0.92)); opacity:0; transition: opacity .28s var(--ease); }
+    .lightbox.show .backdrop{ opacity:1; }
+    .lb-content{ position:relative; z-index:2; max-width:1100px; width:94%; max-height:90vh; display:flex; align-items:center; justify-content:center; }
+    .lb-image{ max-width:calc(100% - 48px); max-height:calc(90vh - 48px); object-fit:contain; border-radius:8px; box-shadow: 0 20px 80px rgba(2,6,20,0.75); display:block; }
+    .lb-caption{ position:absolute; bottom:18px; left:18px; padding:8px 12px; border-radius:8px; background:rgba(0,0,0,0.44); color:#fff; font-size:0.95rem; }
+    .btn{ background:rgba(255,255,255,0.03); border:none; color:#fff; padding:10px 12px; border-radius:10px; cursor:pointer; }
+    .lb-close{ position:absolute; top:12px; right:12px; }
+    .lb-prev{ left:12px; top:50%; transform:translateY(-50%); position:absolute; }
+    .lb-next{ right:12px; top:50%; transform:translateY(-50%); position:absolute; }
+
+    button:focus, input:focus{ outline:2px solid rgba(124,58,237,0.45); outline-offset:2px; }
+
+    .msg{ color:#ffcc66; margin-top:8px; font-size:0.95rem; }
+
+    @media(max-width:420px){ .card{ height:220px } .meta h3{ font-size:0.9rem } }
+  </style>
+</head>
+<body>
+  <div class="wrap" id="app">
+    <!-- NAV / HEADER -->
+    <div class="navbar" role="banner">
+      <div class="nav-side" aria-hidden="true"></div>
+
+      <div class="brand" role="heading" aria-level="1">
+        <div class="logo" aria-hidden="true">SG</div>
+        <div>
+          <h1>Stellar Gallery</h1>
+          <p class="subtitle">Reliable demo — stable images + graceful fallback</p>
+        </div>
+      </div>
+
+      <div class="nav-side right" aria-hidden="true"></div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls" role="region" aria-label="gallery controls">
+      <div class="filter-bar" role="toolbar" aria-label="Category filters">
+        <button class="filter active" data-filter="all" aria-pressed="true">All</button>
+        <button class="filter" data-filter="nature">Nature</button>
+        <button class="filter" data-filter="architecture">Architecture</button>
+        <button class="filter" data-filter="tech">Tech</button>
+        <button class="filter" data-filter="people">People</button>
+      </div>
+
+      <input id="search" class="search" type="search" placeholder="Search images by name..." aria-label="Search images" />
+    </div>
+
+    <!-- GALLERY: use stable Picsum images (IDs) -->
+    <main>
+      <div id="gallery" class="gallery" aria-live="polite">
+        <div class="card" data-category="nature" data-title="Mountain" tabindex="0">
+          <img loading="lazy" src="https://picsum.photos/id/1018/1200/800" alt="Mountain" onerror="fallbackImg(this)">
+          <div class="meta"><h3>Mountain</h3><span>Nature</span></div>
+        </div>
+
+        <div class="card" data-category="nature" data-title="Forest" tabindex="0">
+          <img loading="lazy" src="https://picsum.photos/id/1015/1200/800" alt="Forest" onerror="fallbackImg(this)">
+          <div class="meta"><h3>Forest</h3><span>Nature</span></div>
+        </div>
+
+        <div class="card" data-category="architecture" data-title="Building" tabindex="0">
+          <img loading="lazy" src="https://picsum.photos/id/1025/1200/800" alt="Building" onerror="fallbackImg(this)">
+          <div class="meta"><h3>Building</h3><span>Architecture</span></div>
+        </div>
+
+        <div class="card" data-category="architecture" data-title="Bridge" tabindex="0">
+          <img loading="lazy" src="https://picsum.photos/id/1031/1200/800" alt="Bridge" onerror="fallbackImg(this)">
+          <div class="meta"><h3>Bridge</h3><span>Architecture</span></div>
+        </div>
+
+        <div class="card" data-category="tech" data-title="Laptop Setup" tabindex="0">
+          <img loading="lazy" src="https://picsum.photos/id/180/1200/800" alt="Laptop Setup" onerror="fallbackImg(this)">
+          <div class="meta"><h3>Laptop Setup</h3><span>Tech</span></div>
+        </div>
+
+        <div class="card" data-category="tech" data-title="Keyboard" tabindex="0">
+          <img loading="lazy" src="https://picsum.photos/id/0/1200/800" alt="Keyboard" onerror="fallbackImg(this)">
+          <div class="meta"><h3>Keyboard</h3><span>Tech</span></div>
+        </div>
+
+        <div class="card" data-category="people" data-title="Portrait" tabindex="0">
+          <img loading="lazy" src="https://picsum.photos/id/1005/1200/800" alt="Portrait" onerror="fallbackImg(this)">
+          <div class="meta"><h3>Portrait</h3><span>People</span></div>
+        </div>
+
+        <div class="card" data-category="people" data-title="Smile" tabindex="0">
+          <img loading="lazy" src="https://picsum.photos/id/1001/1200/800" alt="Smile" onerror="fallbackImg(this)">
+          <div class="meta"><h3>Smile</h3><span>People</span></div>
+        </div>
+
+        <div class="card" data-category="nature" data-title="Lake" tabindex="0">
+          <img loading="lazy" src="https://picsum.photos/id/1011/1200/800" alt="Lake" onerror="fallbackImg(this)">
+          <div class="meta"><h3>Lake</h3><span>Nature</span></div>
+        </div>
+
+        <div class="card" data-category="architecture" data-title="Modern Atrium" tabindex="0">
+          <img loading="lazy" src="https://picsum.photos/id/984/1200/800" alt="Modern Atrium" onerror="fallbackImg(this)">
+          <div class="meta"><h3>Modern Atrium</h3><span>Architecture</span></div>
+        </div>
+
+        <div class="card" data-category="tech" data-title="Microchip" tabindex="0">
+          <img loading="lazy" src="https://picsum.photos/id/1084/1200/800" alt="Microchip" onerror="fallbackImg(this)">
+          <div class="meta"><h3>Microchip</h3><span>Tech</span></div>
+        </div>
+
+        <div class="card" data-category="people" data-title="Urban Portrait" tabindex="0">
+          <img loading="lazy" src="https://picsum.photos/id/1027/1200/800" alt="Urban Portrait" onerror="fallbackImg(this)">
+          <div class="meta"><h3>Urban Portrait</h3><span>People</span></div>
+        </div>
+      </div>
+
+      <div class="msg" id="msg" aria-hidden="true"></div>
+    </main>
+  </div>
+
+  <!-- LIGHTBOX -->
+  <div id="lightbox" class="lightbox" role="dialog" aria-hidden="true" aria-label="Image viewer">
+    <div class="backdrop" data-close="true"></div>
+    <div class="lb-content" role="document">
+      <button class="btn lb-close" aria-label="Close (Esc)">✕</button>
+      <button class="btn lb-prev" aria-label="Previous (Arrow Left)">◀</button>
+      <img class="lb-image" src="" alt="" />
+      <button class="btn lb-next" aria-label="Next (Arrow Right)">▶</button>
+      <div class="lb-caption" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // DOM refs
+      const gallery = document.getElementById('gallery');
+      const cards = Array.from(gallery.querySelectorAll('.card'));
+      const filters = Array.from(document.querySelectorAll('.filter'));
+      const searchInput = document.getElementById('search');
+      const msg = document.getElementById('msg');
+
+      const lb = document.getElementById('lightbox');
+      const lbBackdrop = lb.querySelector('.backdrop');
+      const lbImage = lb.querySelector('.lb-image');
+      const lbCaption = lb.querySelector('.lb-caption');
+      const btnClose = lb.querySelector('.lb-close');
+      const btnNext = lb.querySelector('.lb-next');
+      const btnPrev = lb.querySelector('.lb-prev');
+
+      // state
+      let currentFilter = 'all';
+      let currentSearch = '';
+      let visibleCards = cards.slice();
+      let currentIndex = -1;
+
+      // fallback generator: create a simple SVG data URI including title + category
+      window.fallbackImg = function (img) {
+        try {
+          const card = img.closest('.card');
+          const title = (card && card.dataset.title) ? card.dataset.title : 'Image';
+          const category = (card && card.dataset.category) ? card.dataset.category : '';
+          const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'>
+            <rect width='100%' height='100%' fill='#0f172a'/>
+            <text x='50%' y='45%' fill='#ffffff' font-family='Arial,Helvetica,sans-serif' font-size='48' text-anchor='middle'>${escapeXml(title)}</text>
+            <text x='50%' y='60%' fill='#cbd5e1' font-family='Arial,Helvetica,sans-serif' font-size='22' text-anchor='middle'>${escapeXml(category)}</text>
+          </svg>`;
+          img.onerror = null;
+          img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+          img.alt = title + ' (fallback)';
+        } catch (e) {
+          console.warn('fallbackImg error', e);
+        }
+      };
+
+      function escapeXml(s) {
+        return String(s).replace(/[&<>'"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&apos;', '"': '&quot;' }[c]; });
+      }
+
+      // compute visible
+      function computeVisible() {
+        visibleCards = cards.filter(c => !c.classList.contains('hidden'));
+      }
+
+      // apply filters
+      function applyFilters() {
+        const q = (currentSearch || '').trim().toLowerCase();
+        let anyVisible = false;
+        cards.forEach(card => {
+          const cat = (card.dataset.category || '').toLowerCase();
+          const title = (card.dataset.title || '').toLowerCase();
+          const matchCat = (currentFilter === 'all') || (cat === currentFilter);
+          const matchSearch = (!q) || title.includes(q);
+          const show = matchCat && matchSearch;
+          if (show) { card.classList.remove('hidden'); anyVisible = true; } else { card.classList.add('hidden'); }
+        });
+        computeVisible();
+        msg.textContent = anyVisible ? '' : 'No images found — try another filter or search term.';
+        msg.setAttribute('aria-hidden', anyVisible ? 'true' : 'false');
+      }
+
+      // filter buttons
+      filters.forEach(btn => {
+        btn.addEventListener('click', () => {
+          filters.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentFilter = (btn.dataset.filter || 'all').toLowerCase();
+          applyFilters();
+        });
+      });
+
+      // search (debounced)
+      let searchTimer = null;
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+          currentSearch = e.target.value || '';
+          applyFilters();
+        }, 120);
+      });
+
+      // lightbox functions
+      function openLightbox(index) {
+        if (visibleCards.length === 0) return;
+        currentIndex = ((index % visibleCards.length) + visibleCards.length) % visibleCards.length;
+        const card = visibleCards[currentIndex];
+        const img = card.querySelector('img');
+        let src = img.src;
+        // If picsum src, request larger size for the lightbox by replacing dimensions
+        try {
+          const u = new URL(src);
+          if (u.hostname && u.hostname.includes('picsum.photos')) {
+            // replace path to request large size (1200x800 -> 1600x1066)
+            const idMatch = u.pathname.match(/\/id\/(\d+)\/\d+\/\d+/);
+            if (idMatch) {
+              src = `https://picsum.photos/id/${idMatch[1]}/1600/1066`;
+            }
+          }
+        } catch (err) {
+          // ignore URL parse errors
+        }
+        lbImage.src = src;
+        lbImage.alt = img.alt || card.dataset.title || '';
+        lbCaption.textContent = (card.dataset.title || '') + ' — ' + (card.dataset.category || '');
+        lb.classList.add('show');
+        lb.setAttribute('aria-hidden', 'false');
+        btnClose.focus();
+      }
+
+      function closeLightbox() {
+        lb.classList.remove('show');
+        lb.setAttribute('aria-hidden', 'true');
+        lbImage.src = '';
+        currentIndex = -1;
+      }
+
+      function showNext() {
+        if (visibleCards.length === 0) return;
+        openLightbox(currentIndex + 1);
+      }
+
+      function showPrev() {
+        if (visibleCards.length === 0) return;
+        openLightbox(currentIndex - 1);
+      }
+
+      // gallery click → open lightbox
+      gallery.addEventListener('click', (e) => {
+        const card = e.target.closest('.card');
+        if (!card || card.classList.contains('hidden')) return;
+        computeVisible();
+        const idx = visibleCards.indexOf(card);
+        openLightbox(idx);
+      });
+
+      // lightbox controls
+      btnClose.addEventListener('click', closeLightbox);
+      btnNext.addEventListener('click', showNext);
+      btnPrev.addEventListener('click', showPrev);
+      lbBackdrop.addEventListener('click', (ev) => { if (ev.target.dataset.close === 'true') closeLightbox(); });
+
+      // keyboard navigation
+      document.addEventListener('keydown', (e) => {
+        if (lb.classList.contains('show')) {
+          if (e.key === 'Escape') closeLightbox();
+          if (e.key === 'ArrowRight') showNext();
+          if (e.key === 'ArrowLeft') showPrev();
+        }
+      });
+
+      // make cards keyboard-openable by Enter/Space
+      cards.forEach(c => {
+        c.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            computeVisible();
+            openLightbox(visibleCards.indexOf(c));
+          }
+        });
+      });
+
+      // initial apply filters
+      applyFilters();
+
+      // dev console hint
+      console.info('Stellar Gallery ready. If remote images fail, you will see SVG fallbacks.');
+    })();
+  </script>
+</body>
+</html>

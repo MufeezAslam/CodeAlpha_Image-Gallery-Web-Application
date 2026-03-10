@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Image Diagnostic</title>
+  <style>body{font-family:Arial;background:#0f172a;color:#fff;padding:20px} .box{margin:12px 0;padding:12px;border-radius:8px;background:#071027}</style>
+</style></head>
+<body>
+  <h2>Image diagnostic — quick check</h2>
+
+  <div class="box">
+    <strong>1) Local inline SVG (always should show)</strong>
+    <div><img alt="Inline SVG" src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300"><rect width="100%" height="100%" fill="%230f172a"/><text x="50%" y="50%" font-size="24" fill="%23ffffff" text-anchor="middle" dominant-baseline="middle">INLINE TEST IMAGE</text></svg>' style="max-width:100%;height:auto;border-radius:6px;margin-top:8px"></div>
+  </div>
+
+  <div class="box">
+    <strong>2) Placeholder (needs internet)</strong>
+    <div><img alt="Placeholder" src="https://via.placeholder.com/900x600.png?text=Placeholder+Image" style="max-width:100%;height:auto;border-radius:6px;margin-top:8px"></div>
+  </div>
+
+  <div class="box">
+    <strong>3) Unsplash dynamic (needs internet & not blocked)</strong>
+    <div><img alt="Unsplash" src="https://source.unsplash.com/900x600/?nature&sig=42" style="max-width:100%;height:auto;border-radius:6px;margin-top:8px"></div>
+  </div>
+
+  <hr>
+  <p>If <em>1) Inline SVG</em> shows but <em>2) and/or 3)</em> do not, your computer/browser cannot reach the internet or those hosts are blocked. If nothing shows, check the browser console (press F12 → Console) and copy any errors.</p>
+</body>
+</html>
